@@ -125,6 +125,7 @@ struct SearchAnswer {
     stops: Vec<Stop>,
 }
 
+/// Answer to a query for departures. Contains stop name, timestamp, and all departures.
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Departures {
     /// response timestamp

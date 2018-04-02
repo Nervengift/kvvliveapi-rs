@@ -9,13 +9,12 @@ extern crate reqwest;
 
 use chrono::{NaiveDateTime, NaiveTime, DateTime, Local, Duration, TimeZone};
 use chrono_tz::Europe::Berlin;
-use serde::{Deserializer, Deserialize};
+use serde::de::{Deserializer, Deserialize, DeserializeOwned};
 use regex::Regex;
 use url::Url;
 use reqwest::{Client, StatusCode};
 
 use std::str::FromStr;
-use std::io::Read;
 
 const API_KEY: &str = "377d840e54b59adbe53608ba1aad70e8";
 const API_BASE: &str = "https://live.kvv.de/webapp/";
@@ -24,7 +23,7 @@ fn parse_departure_time<'de, D>(deserializer: D) -> Result<DateTime<chrono_tz::T
 where
     D: Deserializer<'de>,
 {
-    let s: &str = Deserialize::deserialize(deserializer)?;
+    let s: String = Deserialize::deserialize(deserializer)?;
 
     let re = Regex::new(r"^([1-9]) min$").unwrap();
 
@@ -36,7 +35,7 @@ where
         let mins = i64::from_str(mins).unwrap();
         Ok(Local::now().with_timezone(&Berlin) + Duration::minutes(mins))
     } else {
-        NaiveTime::parse_from_str(s, "%H:%M")
+        NaiveTime::parse_from_str(&s, "%H:%M")
             .map(|t| {
                 let now = Local::now().with_timezone(&Berlin).naive_local();
                 let mut departure = now.date().and_time(t);
@@ -53,8 +52,8 @@ fn parse_timestamp<'de, D>(deserializer: D) -> Result<DateTime<chrono_tz::Tz>, D
 where
     D: Deserializer<'de>,
 {
-    let s: &str = Deserialize::deserialize(deserializer)?;
-    NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+    let s: String = Deserialize::deserialize(deserializer)?;
+    NaiveDateTime::parse_from_str(&s, "%Y-%m-%d %H:%M:%S")
         .map(|d| Berlin.from_local_datetime(&d).unwrap())
         .map_err(serde::de::Error::custom)
 }
@@ -111,23 +110,16 @@ pub struct Departures {
     departures: Vec<Departure>,
 }
 
-fn query(path: &str, params: Vec<(&str, &str)>) -> Result<String, reqwest::Error> {
+fn query<T: DeserializeOwned>(path: &str, params: Vec<(&str, &str)>) -> Result<T, reqwest::Error> {
     let mut params = params.clone();
     params.push(("key", API_KEY));
 
     let url = Url::parse_with_params(&format!("{}{}", API_BASE, path), params).unwrap();
-    let mut resp = Client::new().get(url).send()?.error_for_status()?;
-
-    let mut content = String::new();
-    resp.read_to_string(&mut content).unwrap();
-    Ok(content)
+    Client::new().get(url).send()?.error_for_status()?.json()
 }
 
 fn search(path: &str) -> Result<Vec<Stop>, reqwest::Error> {
-    query(path, vec![])
-        .map(|s| {
-            serde_json::from_str::<SearchAnswer>(&s).unwrap().stops  //TODO: handle Result
-        })
+    query::<SearchAnswer>(path, vec![]).map(|s| s.stops)
 }
 
 /// Search stops by their name
@@ -143,7 +135,7 @@ pub fn search_by_latlon(lat: f64, lon: f64) -> Result<Vec<Stop>, reqwest::Error>
 /// Get a stop by its id. Returns None if the given stop id does not exist.
 pub fn search_by_stop_id(stop_id: &str) -> Result<Option<Stop>, reqwest::Error> {
     match query(&format!("stops/bystop/{}", stop_id), vec![]) {
-        Ok(s) => Ok(Some(serde_json::from_str::<Stop>(&s).unwrap())),  //TODO: handle Result
+        Ok(s) => Ok(Some(s)),
         Err(e) => {
             match e.status() {
                 Some(StatusCode::BadRequest) => Ok(None),  // unknown stop id
@@ -154,10 +146,7 @@ pub fn search_by_stop_id(stop_id: &str) -> Result<Option<Stop>, reqwest::Error> 
 }
 
 fn departures(path: &str, max_info: u32) -> Result<Departures, reqwest::Error> {
-    query(path, vec![("maxInfo", &max_info.to_string())])
-        .map(|s| {
-            serde_json::from_str::<Departures>(&s).unwrap()  //TODO: handle Result
-        })
+    query::<Departures>(path, vec![("maxInfo", &max_info.to_string())])
 }
 
 pub fn departures_by_stop_with_max(stop_id: &str, max_info: u32) -> Result<Departures, reqwest::Error> {

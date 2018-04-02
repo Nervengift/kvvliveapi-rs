@@ -17,6 +17,7 @@ use url::Url;
 use reqwest::{Client, StatusCode};
 
 use std::str::FromStr;
+use std::fmt::Display;
 
 const API_KEY: &str = "377d840e54b59adbe53608ba1aad70e8";
 const API_BASE: &str = "https://live.kvv.de/webapp/";
@@ -60,6 +61,15 @@ where
         .map_err(serde::de::Error::custom)
 }
 
+pub fn format_departure_time(dt: DateTime<chrono_tz::Tz>) -> String {
+    let minutes = dt.signed_duration_since(Local::now()).num_minutes();
+    match minutes {
+        0 => "now".to_owned(),
+        1...9 => format!("{} min", minutes),
+        _ => format!("{}", dt.format("%H:%M")),
+    }
+}
+
 /// Information about a tram station
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Stop {
@@ -71,6 +81,12 @@ pub struct Stop {
     lat: f64,
     /// position longitude
     lon: f64,
+}
+
+impl Display for Stop {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{} ({})", self.name, self.id)
+    }
 }
 
 /// A single departure containing information about time, platform, and the train
@@ -95,6 +111,13 @@ pub struct Departure {
     /// platform the train arrives on
     #[serde(rename = "stopPosition")]
     platform: String,
+}
+
+impl Display for Departure {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let rt = if self.realtime {"*"} else {" "};
+        write!(f, "{:<3} {:<20} {}{}", self.route, self.destination, format_departure_time(self.time), rt)
+    }
 }
 
 #[derive(Debug, Deserialize, PartialEq)]

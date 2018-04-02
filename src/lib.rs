@@ -74,13 +74,13 @@ pub fn format_departure_time(dt: DateTime<chrono_tz::Tz>) -> String {
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Stop {
     /// human readable stop name
-    name: String,
+    pub name: String,
     /// internal stop id
-    id: String,
+    pub id: String,
     /// position latitude
-    lat: f64,
+    pub lat: f64,
     /// position longitude
-    lon: f64,
+    pub lon: f64,
 }
 
 impl Display for Stop {
@@ -93,24 +93,24 @@ impl Display for Stop {
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Departure {
     /// tram line name
-    route: String,
+    pub route: String,
     /// destination stop
-    destination: String,
+    pub destination: String,
     /// which direction the tram is going (1 or 2)
     /// does not seem to correspond to platform
-    direction: String,
+    pub direction: String,
     /// when the train arrives
     #[serde(deserialize_with = "parse_departure_time")]
-    time: DateTime<chrono_tz::Tz>,
+    pub time: DateTime<chrono_tz::Tz>,
     /// low-floor tram?
-    lowfloor: bool,
+    pub lowfloor: bool,
     /// real time data available?
-    realtime: bool,
+    pub realtime: bool,
     /// not sure. seen 0 or 2 as values
-    traction: u32,
+    pub traction: u32,
     /// platform the train arrives on
     #[serde(rename = "stopPosition")]
-    platform: String,
+    pub platform: String,
 }
 
 impl Display for Departure {
@@ -129,12 +129,12 @@ struct SearchAnswer {
 pub struct Departures {
     /// response timestamp
     #[serde(deserialize_with = "parse_timestamp")]
-    timestamp: DateTime<chrono_tz::Tz>,
+    pub timestamp: DateTime<chrono_tz::Tz>,
     /// human-readable stop name
     #[serde(rename = "stopName")]
-    stop_name: String,
+    pub stop_name: String,
     /// all scheduled departures
-    departures: Vec<Departure>,
+    pub departures: Vec<Departure>,
 }
 
 fn query<T: DeserializeOwned>(path: &str, params: Vec<(&str, &str)>) -> Result<T, reqwest::Error> {

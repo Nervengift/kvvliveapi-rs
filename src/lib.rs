@@ -1,3 +1,5 @@
+//! Bindings for the live data API of the "Karlsruher Verkehrsverbund (KVV)"
+
 #[macro_use] extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
@@ -58,6 +60,7 @@ where
         .map_err(serde::de::Error::custom)
 }
 
+/// Information about a tram station
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Stop {
     /// human readable stop name
@@ -70,6 +73,7 @@ pub struct Stop {
     lon: f64,
 }
 
+/// A single departure containing information about time, platform, and the train
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Departure {
     /// tram line name
@@ -149,18 +153,22 @@ fn departures(path: &str, max_info: u32) -> Result<Departures, reqwest::Error> {
     query::<Departures>(path, vec![("maxInfo", &max_info.to_string())])
 }
 
+/// Get next departures for a stop up to a maximum of max_info entries (may be less)
 pub fn departures_by_stop_with_max(stop_id: &str, max_info: u32) -> Result<Departures, reqwest::Error> {
     departures(&format!("departures/bystop/{}", stop_id), max_info)
 }
 
+/// Get next departures for a stop (up to 10)
 pub fn departures_by_stop(stop_id: &str) -> Result<Departures, reqwest::Error> {
     departures(&format!("departures/bystop/{}", stop_id), 10)
 }
 
+/// Get next departures for a given stop and route up to a maximum of max_info entries (may be less)
 pub fn departures_by_route_with_max(stop_id: &str, route: &str, max_info: u32) -> Result<Departures, reqwest::Error> {
     departures(&format!("departures/byroute/{}/{}", route, stop_id), max_info)
 }
 
+/// Get next departures for a given stop and route (up to 10)
 pub fn departures_by_route(stop_id: &str, route: &str) -> Result<Departures, reqwest::Error> {
     departures(&format!("departures/byroute/{}/{}", route, stop_id), 10)
 }

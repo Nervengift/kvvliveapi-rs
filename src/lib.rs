@@ -30,7 +30,7 @@ where
 
     let re = Regex::new(r"^([1-9]) min$").unwrap();
 
-    if s == "sofort" {
+    if s == "0" {
         Ok(Local::now().with_timezone(&Berlin))
     } else if re.is_match(&s) {
         // unwraps should be ok, because of the regex test

@@ -166,7 +166,7 @@ pub fn search_by_stop_id(stop_id: &str) -> Result<Option<Stop>, reqwest::Error> 
         Ok(s) => Ok(Some(s)),
         Err(e) => {
             match e.status() {
-                Some(StatusCode::BadRequest) => Ok(None),  // unknown stop id
+                Some(StatusCode::BAD_REQUEST) => Ok(None),  // unknown stop id
                 _ => Err(e),
             }
         },

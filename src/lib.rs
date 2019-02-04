@@ -109,8 +109,8 @@ pub struct Departure {
     /// not sure. seen 0 or 2 as values
     pub traction: u32,
     /// platform the train arrives on
-    #[serde(rename = "stopPosition")]
-    pub platform: String,
+    //#[serde(rename = "stopPosition")]
+    //pub platform: String,
 }
 
 impl Display for Departure {

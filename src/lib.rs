@@ -30,7 +30,7 @@ where
 
     let re = Regex::new(r"^([1-9]) min$").unwrap();
 
-    if s == "sofort" {
+    if s == "0" {
         Ok(Local::now().with_timezone(&Berlin))
     } else if re.is_match(&s) {
         // unwraps should be ok, because of the regex test
@@ -108,9 +108,6 @@ pub struct Departure {
     pub realtime: bool,
     /// not sure. seen 0 or 2 as values
     pub traction: u32,
-    /// platform the train arrives on
-    #[serde(rename = "stopPosition")]
-    pub platform: String,
 }
 
 impl Display for Departure {
@@ -166,7 +163,7 @@ pub fn search_by_stop_id(stop_id: &str) -> Result<Option<Stop>, reqwest::Error> 
         Ok(s) => Ok(Some(s)),
         Err(e) => {
             match e.status() {
-                Some(StatusCode::BadRequest) => Ok(None),  // unknown stop id
+                Some(StatusCode::BAD_REQUEST) => Ok(None),  // unknown stop id
                 _ => Err(e),
             }
         },
@@ -213,7 +210,7 @@ mod tests {
     use super::*;
     use serde_json;
 
-    const EXAMPLE_DEPARTURES: &str = r#"{"timestamp":"2018-03-31 22:16:45","stopName":"Friedrichstal Mitte","departures":[{"route":"S2","destination":"Spöck","direction":"2","time":"4 min","vehicleType":null,"lowfloor":true,"realtime":true,"traction":0,"stopPosition":"2"},{"route":"S2","destination":"Rheinstetten","direction":"1","time":"22:40","vehicleType":null,"lowfloor":true,"realtime":true,"traction":0,"stopPosition":"1"}]}"#;
+    const EXAMPLE_DEPARTURES: &str = r#"{"timestamp":"2018-03-31 22:16:45","stopName":"Friedrichstal Mitte","departures":[{"route":"S2","destination":"Spöck","direction":"2","time":"4 min","vehicleType":null,"lowfloor":true,"realtime":true,"traction":0},{"route":"S2","destination":"Rheinstetten","direction":"1","time":"22:40","vehicleType":null,"lowfloor":true,"realtime":true,"traction":0}]}"#;
     const EXAMPLE_STOPS: &str = r#"{"stops":[{"id":"de:8215:14304","name":"Oberderdingen Lindenplatz","lat":49.06906386,"lon":8.80650108},{"id":"de:8211:31908","name":"Baden-Baden Klosterplatz","lat":48.74631613,"lon":8.2558711}]}"#;
 
     #[test]

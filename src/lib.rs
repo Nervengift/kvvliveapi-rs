@@ -1,23 +1,24 @@
 //! Bindings for the live data API of the "Karlsruher Verkehrsverbund (KVV)"
 
-#[macro_use] extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
+#[macro_use]
+extern crate serde_derive;
 extern crate chrono;
 extern crate chrono_tz;
 extern crate regex;
-extern crate url;
 extern crate reqwest;
+extern crate serde;
+extern crate serde_json;
+extern crate url;
 
-use chrono::{NaiveDateTime, NaiveTime, DateTime, Local, Duration, TimeZone};
+use chrono::{DateTime, Duration, Local, NaiveDateTime, NaiveTime, TimeZone};
 use chrono_tz::Europe::Berlin;
-use serde::de::{Deserializer, Deserialize, DeserializeOwned};
 use regex::Regex;
+use reqwest::StatusCode;
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use url::Url;
-use reqwest::{Client, StatusCode};
 
-use std::str::FromStr;
 use std::fmt::Display;
+use std::str::FromStr;
 
 const API_KEY: &str = "377d840e54b59adbe53608ba1aad70e8";
 const API_BASE: &str = "https://live.kvv.de/webapp/";
@@ -65,7 +66,7 @@ pub fn format_departure_time(dt: DateTime<chrono_tz::Tz>) -> String {
     let minutes = dt.signed_duration_since(Local::now()).num_minutes();
     match minutes {
         0 => "now".to_owned(),
-        1...9 => format!("{} min", minutes),
+        1..=9 => format!("{} min", minutes),
         _ => format!("{}", dt.format("%H:%M")),
     }
 }
@@ -112,8 +113,15 @@ pub struct Departure {
 
 impl Display for Departure {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        let rt = if self.realtime {"*"} else {" "};
-        write!(f, "{:<3} {:<20} {}{}", self.route, self.destination, format_departure_time(self.time), rt)
+        let rt = if self.realtime { "*" } else { " " };
+        write!(
+            f,
+            "{:<3} {:<20} {}{}",
+            self.route,
+            self.destination,
+            format_departure_time(self.time),
+            rt
+        )
     }
 }
 
@@ -140,7 +148,7 @@ fn query<T: DeserializeOwned>(path: &str, params: Vec<(&str, &str)>) -> Result<T
     params.push(("key", API_KEY));
 
     let url = Url::parse_with_params(&format!("{}{}", API_BASE, path), params).unwrap();
-    Client::new().get(url).send()?.error_for_status()?.json()
+    reqwest::blocking::get(url)?.json()
 }
 
 fn search(path: &str) -> Result<Vec<Stop>, reqwest::Error> {
@@ -163,10 +171,10 @@ pub fn search_by_stop_id(stop_id: &str) -> Result<Option<Stop>, reqwest::Error> 
         Ok(s) => Ok(Some(s)),
         Err(e) => {
             match e.status() {
-                Some(StatusCode::BAD_REQUEST) => Ok(None),  // unknown stop id
+                Some(StatusCode::BAD_REQUEST) => Ok(None), // unknown stop id
                 _ => Err(e),
             }
-        },
+        }
     }
 }
 
@@ -182,7 +190,10 @@ fn departures_with_max(path: &str, max_info: u32) -> Result<Departures, reqwest:
 ///
 /// Note that the API does not seem to yield more than 10 results with max_info specified,
 /// but may yield more results without it
-pub fn departures_by_stop_with_max(stop_id: &str, max_info: u32) -> Result<Departures, reqwest::Error> {
+pub fn departures_by_stop_with_max(
+    stop_id: &str,
+    max_info: u32,
+) -> Result<Departures, reqwest::Error> {
     departures_with_max(&format!("departures/bystop/{}", stop_id), max_info)
 }
 
@@ -195,15 +206,21 @@ pub fn departures_by_stop(stop_id: &str) -> Result<Departures, reqwest::Error> {
 ///
 /// Note that the API does not seem to yield more than 10 results with max_info specified,
 /// but may yield more results without it
-pub fn departures_by_route_with_max(stop_id: &str, route: &str, max_info: u32) -> Result<Departures, reqwest::Error> {
-    departures_with_max(&format!("departures/byroute/{}/{}", route, stop_id), max_info)
+pub fn departures_by_route_with_max(
+    stop_id: &str,
+    route: &str,
+    max_info: u32,
+) -> Result<Departures, reqwest::Error> {
+    departures_with_max(
+        &format!("departures/byroute/{}/{}", route, stop_id),
+        max_info,
+    )
 }
 
 /// Get next departures for a given stop and route (up to 10)
 pub fn departures_by_route(stop_id: &str, route: &str) -> Result<Departures, reqwest::Error> {
     departures(&format!("departures/byroute/{}/{}", route, stop_id))
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -220,7 +237,22 @@ mod tests {
 
     #[test]
     fn deserialize_departures() {
-        let stops_ref = SearchAnswer{ stops: vec![Stop { name: "Oberderdingen Lindenplatz".to_owned(), id: "de:8215:14304".to_owned(), lat: 49.06906386, lon: 8.80650108 }, Stop { name: "Baden-Baden Klosterplatz".to_owned(), id: "de:8211:31908".to_owned(), lat: 48.74631613, lon: 8.2558711 }] };
+        let stops_ref = SearchAnswer {
+            stops: vec![
+                Stop {
+                    name: "Oberderdingen Lindenplatz".to_owned(),
+                    id: "de:8215:14304".to_owned(),
+                    lat: 49.06906386,
+                    lon: 8.80650108,
+                },
+                Stop {
+                    name: "Baden-Baden Klosterplatz".to_owned(),
+                    id: "de:8211:31908".to_owned(),
+                    lat: 48.74631613,
+                    lon: 8.2558711,
+                },
+            ],
+        };
         let stops: SearchAnswer = serde_json::from_str(EXAMPLE_STOPS).unwrap();
         assert_eq!(stops, stops_ref);
     }

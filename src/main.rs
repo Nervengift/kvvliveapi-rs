@@ -4,7 +4,6 @@ extern crate reqwest;
 use kvvliveapi::*;
 
 use std::env::args;
-use std::error::Error;
 
 fn do_stuff(args: Vec<String>) -> Result<(), reqwest::Error> {
     if args.len() < 3 {
@@ -23,7 +22,8 @@ fn do_stuff(args: Vec<String>) -> Result<(), reqwest::Error> {
             } else {
                 let stops = match args.len() {
                     4 => {
-                        if let (Ok(lat), Ok(lon)) = (args[2].parse::<f64>(), args[3].parse::<f64>()) {
+                        if let (Ok(lat), Ok(lon)) = (args[2].parse::<f64>(), args[3].parse::<f64>())
+                        {
                             search_by_latlon(lat, lon)?
                         } else {
                             search_by_name(&args[2..].join(" "))?
@@ -35,7 +35,7 @@ fn do_stuff(args: Vec<String>) -> Result<(), reqwest::Error> {
                     println!("{}", stop)
                 }
             }
-        },
+        }
         "departures" => {
             let deps = match args.len() {
                 3 => departures_by_stop(&args[2])?,
@@ -56,7 +56,7 @@ fn do_stuff(args: Vec<String>) -> Result<(), reqwest::Error> {
                     for dep in deps.departures {
                         println!("{}", dep);
                     }
-                },
+                }
                 None => error(&format!("Could  not find any stop matching \"{}\"", query)),
             }
         }
@@ -82,6 +82,5 @@ fn usage() -> ! {
 
 fn main() {
     let args = args().collect::<Vec<_>>();
-    do_stuff(args).unwrap_or_else(|e| error(e.description()));
+    do_stuff(args).unwrap_or_else(|e| error(e.to_string().as_str()));
 }
-
